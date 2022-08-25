@@ -1,4 +1,4 @@
-import { runCommand } from './helpers.js'
+import { runCommand } from '/example/helpers.js'
 
 export function autocomplete(data, args) {
 	return [

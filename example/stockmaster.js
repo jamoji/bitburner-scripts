@@ -1,7 +1,7 @@
 import {
     instanceCount, getConfiguration, getNsDataThroughFile, runCommand, getActiveSourceFiles, tryGetBitNodeMultipliers,
     formatMoney, formatNumberShort, formatDuration, getStockSymbols
-} from './helpers.js'
+} from '/example/helpers.js'
 
 let disableShorts = false;
 let commission = 100000; // Buy/sell commission. Expected profit must exceed this to buy anything.

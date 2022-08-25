@@ -1,4 +1,4 @@
-import { log, getConfiguration, instanceCount, getNsDataThroughFile, scanAllServers, formatMoney, formatRam } from './helpers.js'
+import { log, getConfiguration, instanceCount, getNsDataThroughFile, scanAllServers, formatMoney, formatRam } from '/example/helpers.js'
 
 // The purpose of the host manager is to buy the best servers it can
 // until it thinks RAM is underutilized enough that you don't need to anymore.

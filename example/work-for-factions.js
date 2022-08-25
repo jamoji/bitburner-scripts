@@ -1,7 +1,7 @@
 import {
     instanceCount, getConfiguration, getNsDataThroughFile, getFilePath, getActiveSourceFiles, tryGetBitNodeMultipliers,
     formatDuration, formatMoney, formatNumberShort, disableLogs, log
-} from './helpers.js'
+} from '/example/helpers.js'
 
 let options;
 const argsSchema = [

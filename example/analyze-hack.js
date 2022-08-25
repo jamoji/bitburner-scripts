@@ -1,4 +1,4 @@
-import { getConfiguration, disableLogs, formatMoney, scanAllServers } from './helpers.js'
+import { getConfiguration, disableLogs, formatMoney, scanAllServers } from '/example/helpers.js'
 
 const argsSchema = [
     ['all', false], // Set to true to report on all servers, not just the ones within our hack level

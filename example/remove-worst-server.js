@@ -1,4 +1,4 @@
-import { getFilePath, getNsDataThroughFile, runCommand, formatRam } from './helpers.js'
+import { getFilePath, getNsDataThroughFile, runCommand, formatRam } from '/example/helpers.js'
 
 /** @param {NS} ns
  * Remove the worst owned server respective of RAM */

@@ -1,4 +1,4 @@
-import { log, getConfiguration, disableLogs, formatMoney, formatDuration, formatNumberShort } from './helpers.js'
+import { log, getConfiguration, disableLogs, formatMoney, formatDuration, formatNumberShort } from '/example/helpers.js'
 
 const sellForMoney = 'Sell for Money';
 

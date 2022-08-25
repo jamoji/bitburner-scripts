@@ -1,4 +1,4 @@
-import { runCommand } from './helpers.js'
+import { runCommand } from '/example/helpers.js'
 
 const escapeChars = ['"', "'", "`"];
 

@@ -1,4 +1,4 @@
-import { instanceCount, getNsDataThroughFile, formatDuration, formatNumberShort } from './helpers.js'
+import { instanceCount, getNsDataThroughFile, formatDuration, formatNumberShort } from '/example/helpers.js'
 import { crimeForKillsKarmaStats } from './work-for-factions.js'
 
 const crimes = ["shoplift", "rob store", "mug", "larceny", "deal drugs", "bond forgery", "traffick arms", "homicide", "grand theft auto", "kidnap", "assassinate", "heist"]

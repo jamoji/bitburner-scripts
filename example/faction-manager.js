@@ -1,7 +1,7 @@
 import {
     log, getConfiguration, instanceCount, formatNumberShort, formatMoney,
     getNsDataThroughFile, getActiveSourceFiles, tryGetBitNodeMultipliers, getStocksValue
-} from './helpers.js'
+} from '/example/helpers.js'
 
 // PLAYER CONFIGURATION CONSTANTS
 // This acts as a list of default "easy" factions to always show even if the user has --hide-locked-factions

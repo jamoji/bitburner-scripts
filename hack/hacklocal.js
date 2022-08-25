@@ -2,8 +2,8 @@
 export async function main(ns) {
 	let args = ns.args;
 	// Defines the "target server", which is the server
-	// that we're going to hack. In this case, it's "n00dles"
-	let target = args[0] ? args[0]:"n00dles";
+	// that we're going to hack. In this case, it's "joesguns"
+	let target = args[0] ? args[0]:"joesguns";
 	let threshold = args[1] ? args[1]:0.75;
 	// Defines how much money a server should have before we hack it
 	// In this case, it is set to 75% of the server's max money

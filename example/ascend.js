@@ -1,7 +1,7 @@
 import {
     log, getConfiguration, getFilePath, runCommand, waitForProcessToComplete, getNsDataThroughFile,
     getActiveSourceFiles, getStockSymbols
-} from './helpers.js'
+} from '/example/helpers.js'
 
 const argsSchema = [
     ['install-augmentations', false], // By default, augs will only be purchased. Set this flag to install (a.k.a reset)

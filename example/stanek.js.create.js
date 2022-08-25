@@ -1,4 +1,4 @@
-import { log, getConfiguration, getNsDataThroughFile } from './helpers.js'
+import { log, getConfiguration, getNsDataThroughFile } from '/example/helpers.js'
 
 const argsSchema = [
 	['clear', false], // If set to true, will clear whatever layout is already there and create a new one

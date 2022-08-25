@@ -1,4 +1,4 @@
-import { log, getConfiguration, instanceCount, disableLogs, getActiveSourceFiles, getNsDataThroughFile, runCommand, formatMoney, formatDuration } from './helpers.js'
+import { log, getConfiguration, instanceCount, disableLogs, getActiveSourceFiles, getNsDataThroughFile, runCommand, formatMoney, formatDuration } from '/example/helpers.js'
 
 const interval = 5000; // Uodate (tick) this often
 const minTaskWorkTime = 29000; // Sleeves assigned a new task should stick to it for at least this many milliseconds

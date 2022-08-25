@@ -1,4 +1,4 @@
-import { log, getConfiguration, getFilePath, waitForProcessToComplete, runCommand, getNsDataThroughFile, autoRetry } from './helpers.js'
+import { log, getConfiguration, getFilePath, waitForProcessToComplete, runCommand, getNsDataThroughFile, autoRetry } from '/example/helpers.js'
 
 const ran_flag = "/Temp/ran-casino.txt"
 let doc = eval("document");

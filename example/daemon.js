@@ -4,7 +4,7 @@ import {
     getNsDataThroughFile_Custom, runCommand_Custom, waitForProcessToComplete_Custom,
     tryGetBitNodeMultipliers_Custom, getActiveSourceFiles_Custom,
     getFnRunViaNsExec, getFnIsAliveViaNsPs, autoRetry
-} from './helpers.js'
+} from '/example/helpers.js'
 
 // daemon.js has histocially been the central orchestrator of almost every script in the game.
 // Only recently has it been "enslaved" to an even higher-level orchestrator: autopilot.js

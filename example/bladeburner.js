@@ -1,4 +1,4 @@
-import { log, disableLogs, getConfiguration, instanceCount, getNsDataThroughFile, getFilePath, getActiveSourceFiles, formatNumberShort, formatDuration } from './helpers.js'
+import { log, disableLogs, getConfiguration, instanceCount, getNsDataThroughFile, getFilePath, getActiveSourceFiles, formatNumberShort, formatDuration } from '/example/helpers.js'
 
 const cityNames = ["Sector-12", "Aevum", "Volhaven", "Chongqing", "New Tokyo", "Ishima"];
 const antiChaosOperation = "Stealth Retirement Operation"; // Note: Faster and more effective than Diplomacy at reducing city chaos

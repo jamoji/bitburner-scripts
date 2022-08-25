@@ -1,7 +1,7 @@
 import {
     log, disableLogs, getFilePath, getConfiguration, formatNumberShort, formatRam,
     getNsDataThroughFile, waitForProcessToComplete, getActiveSourceFiles, instanceCount, unEscapeArrayArgs
-} from './helpers.js'
+} from '/example/helpers.js'
 
 // Default sripts called at startup and shutdown of stanek
 const defaultStartupScript = getFilePath('daemon.js');

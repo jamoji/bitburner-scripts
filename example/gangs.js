@@ -1,7 +1,7 @@
 import {
     log, getConfiguration, instanceCount, getNsDataThroughFile, getActiveSourceFiles, runCommand, tryGetBitNodeMultipliers,
     formatMoney, formatNumberShort, formatDuration
-} from './helpers.js'
+} from '/example/helpers.js'
 
 // Global config
 const updateInterval = 200; // We can improve our timing by updating more often than gang stats do (which is every 2 seconds for stats, every 20 seconds for territory)

@@ -11,6 +11,7 @@ export async function main(ns) {
     let sd = [["home"]];
     let serverDetails = {};
     let depth = 1;
+    let player = ns.getPlayer();
     let serverInfo = (x) => {
         if ( ! serverDetails[x] )
             serverDetails[x] = ns.getServer(x); // If we do not have it cached, then fetch it
@@ -55,10 +56,12 @@ export async function main(ns) {
         ns.print(`Server: ${server} Owned: ${serverDetail.purchasedByPlayer.toString()} 
             hasAdminRights: ${serverDetail.hasAdminRights.toString()} 
             MaxCash:${formatMoney(serverDetail.moneyMax)}`)
-        if ( serverDetail.hasAdminRights ) {
-            launchScriptHelper(ns,'sync.js')
+        if ( ! serverDetail.hasAdminRights && serverDetail.hackDifficulty < player.skills.hacking ) {
+            launchScriptHelper( ns, 'crack-host.js', [ serverDetail.hostname ] );
+        } else if ( serverDetail.hackDifficulty < player.skills.hacking ) {
+            ns.scp( 'hack/hacklocal.js',serverDetail.hostname, 'home' )
         }
+        // ns.exec(p.filename, server, p.threads, ...p.args);
         /** if viruss flag is set, then  go ahead and copy this script there, and have it start from there */
-    } 
-    
+    }     
 }

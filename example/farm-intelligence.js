@@ -1,4 +1,4 @@
-import { log, waitForProcessToComplete, formatDuration, getFilePath } from './helpers.js'
+import { log, waitForProcessToComplete, formatDuration, getFilePath } from '/example/helpers.js'
 
 /** @param {NS} ns */
 export async function main(ns) {

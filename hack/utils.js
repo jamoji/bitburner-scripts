@@ -55,7 +55,10 @@ export function checkNsInstance(ns, fnName = "this function") {
     if (!ns.print) throw new Error(`The first argument to ${fnName} should be a 'ns' instance.`);
     return ns;
 }
-
+/** Joins all arguments as components in a path, e.g. pathJoin("foo", "bar", "/baz") = "foo/bar/baz" **/
+export function pathJoin(...args) {
+    return args.filter(s => !!s).join('/').replace(/\/\/+/g, '/');
+}
 /** Gets the path for the given local file, taking into account optional subfolder relocation via git-pull.js **/
 export function getFilePath(file) {
     const subfolder = '/hack/';  // git-pull.js optionally modifies this when downloading

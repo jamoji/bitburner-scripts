@@ -1,5 +1,5 @@
 import {
-    formatMoney, launchScriptHelper
+    formatMoney, launchScriptHelper, formatNumberShort
 } from '/hack/utils.js'
 
 /** @param {NS} ns */
@@ -10,8 +10,10 @@ export async function main(ns) {
 	let servers = ["home"];
     let sd = [["home"]];
     let serverDetails = {};
-    let depth = 1;
+    let depth = 2;
     let player = ns.getPlayer();
+    let skipHost = ['darkweb'];
+
     let serverInfo = (x) => {
         if ( ! serverDetails[x] )
             serverDetails[x] = ns.getServer(x); // If we do not have it cached, then fetch it
@@ -51,7 +53,9 @@ export async function main(ns) {
     }
     for ( let i = 0; i < servers.length; i++ ) {
         let server = servers[i];
-        let serverDetail = serverInfo[server];
+        let serverDetail = serverInfo(server);
+        if( skipHost.includes(serverDetail.hostname))
+            continue;
         /** from there, step through servers, if we have the root, scp files to those servers, and kick off the hack. */
         ns.print(`Server: ${server} Owned: ${serverDetail.purchasedByPlayer.toString()} 
             hasAdminRights: ${serverDetail.hasAdminRights.toString()} 
@@ -59,7 +63,15 @@ export async function main(ns) {
         if ( ! serverDetail.hasAdminRights && serverDetail.hackDifficulty < player.skills.hacking ) {
             launchScriptHelper( ns, 'crack-host.js', [ serverDetail.hostname ] );
         } else if ( serverDetail.hackDifficulty < player.skills.hacking ) {
-            ns.scp( 'hack/hacklocal.js',serverDetail.hostname, 'home' )
+            if( serverDetail.hostname !== "home")
+                await ns.scp( '/hack/hacklocal.js',serverDetail.hostname, 'home' );
+            // figure out how many of this script can run, then run it on the remote host.
+            // Run the script on the host
+            let memPerThread = ns.getScriptRam('/hack/hacklocal.js','home');
+            let ramAvailible = (serverDetail.maxRam - serverDetail.ramUsed) * threshold;
+            let threads = ramAvailible / memPerThread;
+            ns.print(`Running Hacklocal on ${serverDetail.hostname} RAM: ${ramAvailible} Threads:${threads} for a total of ${formatNumberShort(ns,threads*memPerThread)}}`);
+            await ns.exec('/hack/hacklocal.js',serverDetail.hostname, threads, 'joesguns')
         }
         // ns.exec(p.filename, server, p.threads, ...p.args);
         /** if viruss flag is set, then  go ahead and copy this script there, and have it start from there */

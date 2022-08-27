@@ -1,11 +1,12 @@
 /** @param {NS} ns */
 export async function main(ns) {
 	let args = ns.args;
-	/** args[0] == reserve default 20k, args[1] == maxNumberOfNodes default 25 */
+	/** args[0] == reserve default 20k, args[1] == maxNumberOfNodes default 25, args[2] == maxLevelNodes default 200 */
 	let reserve = args[0] !== undefined ? args[0]:200000;
 	let maxNumberOfNodes = args[1] !== undefined ? args[1]:25;
-	let wait = 10000;
 	let maxLevel = 200;
+	let wait = 10000;
+
 	function myMoney() {
     	return ns.getServerMoneyAvailable("home")-reserve;
 	}

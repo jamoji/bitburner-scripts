@@ -14,14 +14,13 @@ export async function main(ns) {
 	// we'll weaken it before doing anything else
 	let securityThresh = ns.getServerMinSecurityLevel(target) + 5;
 
-	// If we have the BruteSSH.exe program, use it to open the SSH Port
-	// on the target server
-	if (ns.fileExists("BruteSSH.exe", "home")) {
-		ns.brutessh(target);
-	}
-
-	// Get root access to target server
-	ns.nuke(target);
+	// Try every crack, so if we have it, it works.  Then nuke.
+	try { ns.brutessh(target); } catch { }
+    try { ns.ftpcrack(target); } catch { }
+    try { ns.relaysmtp(target); } catch { }
+    try { ns.httpworm(target); } catch { }
+    try { ns.sqlinject(target); } catch { }
+    try { ns.nuke(target); } catch { }
 
 	// Infinite loop that continously hacks/grows/weakens the target server
 	while(true) {

@@ -23,7 +23,15 @@ export function formatNumberShort(num, maxSignificantFigures = 6, maxDecimalPlac
     // TODO: A number like 9.999 once rounded to show 3 sig figs, will become 10.00, which is now 4 sig figs.
     return ((sign < 0) ? "-" : "") + num.toFixed(Math.max(0, Math.min(maxDecimalPlaces, maxSignificantFigures - Math.floor(1 + Math.log10(num))))) + symbols[i];
 }
-
+/** Convert a shortened number back into a value */
+export function parseShortNumber(text = "0") {
+    let parsed = Number(text);
+    if (!isNaN(parsed)) return parsed;
+    for (const sym of symbols.slice(1))
+        if (text.toLowerCase().endsWith(sym))
+            return Number.parseFloat(text.slice(0, text.length - sym.length)) * Math.pow(10, 3 * symbols.indexOf(sym));
+    return Number.NaN;
+}
 /** Helper to get a list of all hostnames on the network
  * @param {NS} ns - The nestcript instance passed to your script's main entry point */
 export function scanAllServers(ns) {

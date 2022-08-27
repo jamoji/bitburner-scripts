@@ -81,7 +81,7 @@ export async function main(ns) {
 			}
 			let player = ns.getPlayer();
 			inputWager.value = player.money >= ammount ? ammount:player.money;
-
+			let peakWinning = 9500000000;
 			// // Step 2.5: Clean up temp files and kill other running scripts to speed up the reload cycle
 			// if (ns.ls("home", "/Temp/").length > 0) { // Do a little clean-up to speed up save/load.
 			// 	// Step 2.5.1: Test that we aren't already kicked out of the casino before doing drastic things like killing scripts

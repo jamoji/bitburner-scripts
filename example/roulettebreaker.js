@@ -71,14 +71,16 @@ export async function main(ns) {
 			await click(blackjack);
 
 			// Step 2.4: Get some buttons we will need to play blackjack
-			inputWager = await findRetry(ns, "//input[@value = 1000000]");
-			btnStartGame = await findRetry(ns, "//button[text() = '35']");
-			rtButton = await findRetry(ns, "//button[text() = 'Return To World']");
+			let inputWager = await findRetry(ns,'//input[@placeholder="Amount to play"]');
+			let btnStartGame = await findRetry(ns, "//button[text() = '35']");
+			rtButton = await findRetry(ns, "//button[text() = 'Return to World']");
 			if (!inputWager || !btnStartGame || !rtButton) {
 				tailAndLog(ns, `ERROR: Could not find one or more game controls. Did something steal focus? Trying again... ` +
 					`Please post a full-game screenshot on Discord if you can't get past this point.`)
 				continue; // Loop back to start and try again
 			}
+			let player = ns.getPlayer();
+			inputWager.value = player.money >= ammount ? ammount:player.money;
 
 			// // Step 2.5: Clean up temp files and kill other running scripts to speed up the reload cycle
 			// if (ns.ls("home", "/Temp/").length > 0) { // Do a little clean-up to speed up save/load.
@@ -124,7 +126,20 @@ async function setText(input, text) {
 	await input[Object.keys(input)[1]].onChange({ isTrusted: true, target: { value: text } });
 	await _ns.sleep(1000);
 }
-function find(xpath) { return doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue; }
+function find(xpath) {
+	let item =  doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+	return item.singleNodeValue; 
+}
+function getElementsByXPath(xpath, parent)
+{
+    let results = [];
+    let query = document.evaluate(xpath, parent || document,
+        null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    for (let i = 0, length = query.snapshotLength; i < length; ++i) {
+        results.push(query.snapshotItem(i));
+    }
+    return results;
+}
 async function findRetry(ns, xpath, expectFailure = false, retries = null) {
 	try {
 		return await autoRetry(ns, () => find(xpath), e => e !== undefined,

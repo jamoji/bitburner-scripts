@@ -21,27 +21,34 @@ export async function main(ns) {
 		ns.tprint("Starting Tail")
 	}
 	ns.print(`Loop: ${loop.toString()} Tries: ${tries.toString()} Betting Loops: ${loops.toString()} Bet ammount: ${ammount.toString()}`);
+	let broken = false;
 	let breakMath = function() {
 		//Override default JS functions
-		Math.floor = (number) => { return 1 }; Math.random = () => { return 0 };
+		Math.floor = (number) => { return 35 }; 
+		Math.random = () => { return 0 };
 		/** use: run this, and then go to roulette and bet on the same choice every time.
 		 *  WARNING!!!
 		 *  the game will crash if you do anything else!
 		 *  save the game and reload to fix.
 		 */
+		 ns.atExit(fixMath);
+		 broken=true;
 	}
 	// fix math function
 	let fixMath = () => {
 		Math.floor = floor;
 		Math.random = random;
+		broken=false;
 	}
+	
+
 	// Step 1.1 Setup the run
 	// Helper function to detect if the "Stop [[faction|company] work|styding|training]" etc... button from the focus screen is up
 	const checkForFocusScreen = async () =>
 		await findRetry(ns, "//button[contains(text(), 'Stop playing')]", true) ? false : // False positive, casino "stop" button, no problems here
 			await findRetry(ns, "//button[contains(text(), 'Stop')]", true); // Otherwise, a button with "Stop" on it is probably from the work screen
 	let attempts = 0; 
-	let rtButton, roulButton, wagerField, wheelSlotButton;
+	
 	while (attempts++ <= tries) {
 		if (attempts > 1) 
 			await ns.sleep(1000);
@@ -73,42 +80,24 @@ export async function main(ns) {
 			// Step 2.4: Get some buttons we will need to play blackjack
 			let inputWager = await findRetry(ns,'//input[@placeholder="Amount to play"]');
 			let btnStartGame = await findRetry(ns, "//button[text() = '35']");
-			rtButton = await findRetry(ns, "//button[text() = 'Return to World']");
+			let rtButton = await findRetry(ns, "//button[text() = 'Return to World']");
 			if (!inputWager || !btnStartGame || !rtButton) {
 				tailAndLog(ns, `ERROR: Could not find one or more game controls. Did something steal focus? Trying again... ` +
 					`Please post a full-game screenshot on Discord if you can't get past this point.`)
 				continue; // Loop back to start and try again
 			}
 			let player = ns.getPlayer();
-			inputWager.value = player.money >= ammount ? ammount:player.money;
+			inputWager.value = Math.floor(player.money >= ammount ? ammount:player.money);
 			let peakWinning = 9500000000;
-			// // Step 2.5: Clean up temp files and kill other running scripts to speed up the reload cycle
-			// if (ns.ls("home", "/Temp/").length > 0) { // Do a little clean-up to speed up save/load.
-			// 	// Step 2.5.1: Test that we aren't already kicked out of the casino before doing drastic things like killing scripts
-			// 	await setText(inputWager, `1`); // Bet just a dollar and quick the game right away, no big deal
-			// 	await click(btnStartGame);
-			// 	if (await findRetry(ns, "//p[contains(text(), 'Count:')]", true, 10)) { // If this works, we're still allowed in
-			// 		const btnStay = await findRetry(ns, "//button[text() = 'Stay']", true);
-			// 		if (btnStay) await click(btnStay); // Trigger the game to end if we didn't instantly win/lose our $1 bet.
-			// 	} else { // Otherwise, we've probably been kicked out of the casino, but...
-			// 		// because we haven't killed scripts yet, it's possible another script stole focus again. Detect and handle that case.
-			// 		if (await checkForFocusScreen()) {
-			// 			log(ns, "ERROR: It looks like something stole focus while we were trying to automate the casino. Trying again.");
-			// 			continue; // Loop back to start and try again
-			// 		}
-			// 		await ns.write(ran_flag, true, "w"); // Write a flag other scripts can check for indicating we think we've been kicked out of the casino.
-			// 		return log(ns, "INFO: We appear to already have been previously kicked out of the casino.", true);
-			// 	}
-			// 	// Step 2.5.2: Kill all other scripts if enabled (note, we assume that if the temp folder is empty, they're already killed and this is a reload)
-			// 	if (options['kill-all-scripts'])
-			// 		await killAllOtherScripts(ns, !options['no-deleting-remote-files']);
-			// 	// Step 2.5.3: Clear the temp folder on home (all transient scripts / outputs)
-			// 	await waitForProcessToComplete(ns, ns.run(getFilePath('cleanup.js')));
-			// }
-			fixMath();
+			let tries = Math.floor(peakWinning / inputWager.value);
+			breakMath();
+			for ( let i = 0 ; i < tries; i++) {
+				ns.print(`Betting ${inputWager.value} Try number ${i} of ${tries}`);
+				await click(btnStartGame);
+			}
+			
 			break; // We achieved everthing we wanted, we can exit the while loop.
 		} catch (err) {
-			fixMath();
 			ns.tail(); // We're having difficulty, pop open a tail window so the user is aware.
 			log(ns, `WARNING: casino.js Caught (and suppressed) an unexpected error while navigating to blackjack. Will try again...\n` +
 				(typeof err === 'string' ? err : err.message || JSON.stringify(err)), false, 'warning');

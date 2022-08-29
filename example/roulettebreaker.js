@@ -23,6 +23,7 @@ export async function main(ns) {
 	ns.print(`Loop: ${loop.toString()} Tries: ${tries.toString()} Betting Loops: ${loops.toString()} Bet ammount: ${ammount.toString()}`);
 	let broken = false;
 	let breakMath = function() {
+		
 		//Override default JS functions
 		Math.floor = (number) => { return 35 }; 
 		Math.random = () => { return 0 };
@@ -88,14 +89,17 @@ export async function main(ns) {
 			}
 			let player = ns.getPlayer();
 			inputWager.value = Math.floor(player.money >= ammount ? ammount:player.money);
-			let peakWinning = 9500000000;
-			let tries = Math.floor(peakWinning / inputWager.value);
+			let peakWinning = 10000000000;
+			ns.tail();
+			ns.disableLog('toast');
 			breakMath();
-			for ( let i = 0 ; i < tries; i++) {
-				ns.print(`Betting ${inputWager.value} Try number ${i} of ${tries}`);
+			while ( player.money < peakWinning ) {
+				// check for cheater, see if i can keep going.
+				inputWager.value = ammount;
 				await click(btnStartGame);
+				player = ns.getPlayer();			
 			}
-			
+			ns.enableLog('toast');
 			break; // We achieved everthing we wanted, we can exit the while loop.
 		} catch (err) {
 			ns.tail(); // We're having difficulty, pop open a tail window so the user is aware.

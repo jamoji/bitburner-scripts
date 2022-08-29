@@ -80,7 +80,10 @@ export function launchScriptHelper(ns, baseScriptName, args = [], convertFileNam
 		log(ns, `INFO: Launched ${baseScriptName} (pid: ${pid}) with args: [${args.join(", ")}]`, true);
 	return pid;
 }
-
+/** If the argument is an Error instance, returns it as is, otherwise, returns a new Error instance. */
+function asError(error) {
+    return error instanceof Error ? error : new Error(typeof error === 'string' ? error : JSON.stringify(error));
+}
 /** Helper to retry something that failed temporarily (can happen when e.g. we temporarily don't have enough RAM to run)
  * @param {NS} ns - The nestcript instance passed to your script's main entry point */
  export async function autoRetry(ns, fnFunctionThatMayFail, fnSuccessCondition, errorContext = "Success condition not met",
@@ -204,4 +207,25 @@ export function launchScriptHelper(ns, baseScriptName, args = [], convertFileNam
         ns.print(errorMessage);
         throw new Error(errorMessage);
     }
+}
+/** Workaround a current bitburner bug by yeilding briefly to the game after executing something.
+ * @param {NS} ns
+ * @param {String} script - Filename of script to execute.
+ * @param {int} host - Hostname of the target server on which to execute the script.
+ * @param {int} numThreads - Optional thread count for new script. Set to 1 by default. Will be rounded to nearest integer.
+ * @param args - Additional arguments to pass into the new script that is being run. Note that if any arguments are being passed into the new script, then the third argument numThreads must be filled in with a value.
+ * @returns — Returns the PID of a successfully started script, and 0 otherwise.
+ * Workaround a current bitburner bug by yeilding briefly to the game after executing something. **/
+ export async function exec(ns, script, host, numThreads, ...args) {
+    // Try to run the script with auto-retry if it fails to start
+    // It doesn't make sense to auto-retry hack tools, only add error handling to other scripts
+    // Otherwise, run with auto-retry to handle e.g. temporary ram issues
+    let verbose = false;
+    const pid = await autoRetry(ns, async () => {
+        const p = ns.exec(script, host, numThreads, ...args)
+        return p;
+    }, p => p !== 0, () => new Error(`Failed to exec ${script} on ${host} with ${numThreads} threads. ` +
+        `This is likely due to having insufficient RAM. Args were: [${args}]`),
+        undefined, undefined, undefined, verbose, verbose);
+    return pid; // Caller is responsible for handling errors if final pid returned is 0 (indicating failure)
 }

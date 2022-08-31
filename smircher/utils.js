@@ -61,7 +61,7 @@ export function pathJoin(...args) {
 }
 /** Gets the path for the given local file, taking into account optional subfolder relocation via git-pull.js **/
 export function getFilePath(file) {
-    const subfolder = '/hack/';  // git-pull.js optionally modifies this when downloading
+    const subfolder = '/smircher/';  // git-pull.js optionally modifies this when downloading
     return pathJoin(subfolder, file);
 }
 
@@ -123,6 +123,9 @@ function asError(error) {
     }
     return message;
 }
+/** @param {NS} ns **/
+export function disableLogs(ns, listOfLogs) { ['disableLog'].concat(...listOfLogs).forEach(log => checkNsInstance(ns, '"disableLogs"').disableLog(log)); }
+
 /**
  * Retrieve the result of an ns command by executing it in a temporary .js script, writing the result to a file, then shuting it down
  * Importing incurs a maximum of 1.1 GB RAM (0 GB for ns.read, 1 GB for ns.run, 0.1 GB for ns.isRunning).
@@ -228,4 +231,164 @@ function asError(error) {
         `This is likely due to having insufficient RAM. Args were: [${args}]`),
         undefined, undefined, undefined, verbose, verbose);
     return pid; // Caller is responsible for handling errors if final pid returned is 0 (indicating failure)
+}
+
+/** A helper to parse the command line arguments with a bunch of extra features, such as
+ * - Loading a persistent defaults override from a local config file named after the script.
+ * - Rendering "--help" output without all scripts having to explicitly specify it
+ * @param {NS} ns
+ * @param {[string, string | number | boolean | string[]][]} argsSchema - Specification of possible command line args. **/
+ export function getConfiguration(ns, argsSchema) {
+    checkNsInstance(ns, '"getConfig"');
+    const scriptName = ns.getScriptName();
+    // If the user has a local config file, override the defaults in the argsSchema
+    const confName = `${scriptName}.config.txt`;
+    const overrides = ns.read(confName);
+    const overriddenSchema = overrides ? [...argsSchema] : argsSchema; // Clone the original args schema    
+    if (overrides) {
+        try {
+            let parsedOverrides = JSON.parse(overrides); // Expect a parsable dict or array of 2-element arrays like args schema
+            if (Array.isArray(parsedOverrides)) parsedOverrides = Object.fromEntries(parsedOverrides);
+            log(ns, `INFO: Applying ${Object.keys(parsedOverrides).length} overriding default arguments from "${confName}"...`);
+            for (const key in parsedOverrides) {
+                const override = parsedOverrides[key];
+                const matchIndex = overriddenSchema.findIndex(o => o[0] == key);
+                const match = matchIndex === -1 ? null : overriddenSchema[matchIndex];
+                if (!match)
+                    throw new Error(`Unrecognized key "${key}" does not match of this script's options: ` + JSON.stringify(argsSchema.map(a => a[0])));
+                else if (override === undefined)
+                    throw new Error(`The key "${key}" appeared in the config with no value. Some value must be provided. Try null?`);
+                else if (match && JSON.stringify(match[1]) != JSON.stringify(override)) {
+                    if (typeof (match[1]) !== typeof (override))
+                        log(ns, `WARNING: The "${confName}" overriding "${key}" value: ${JSON.stringify(override)} has a different type (${typeof override}) than the ` +
+                            `current default value ${JSON.stringify(match[1])} (${typeof match[1]}). The resulting behaviour may be unpredictable.`, false, 'warning');
+                    else
+                        log(ns, `INFO: Overriding "${key}" value: ${JSON.stringify(match[1])}  ->  ${JSON.stringify(override)}`);
+                    overriddenSchema[matchIndex] = { ...match }; // Clone the (previously shallow-copied) object at this position of the new argsSchema
+                    overriddenSchema[matchIndex][1] = override; // Update the value of the clone.
+                }
+            }
+        } catch (err) {
+            log(ns, `ERROR: There's something wrong with your config file "${confName}", it cannot be loaded.` +
+                `\nThe error encountered was: ${(typeof err === 'string' ? err : err.message || JSON.stringify(err))}` +
+                `\nYour config file should either be a dictionary e.g.: { "string-opt": "value", "num-opt": 123, "array-opt": ["one", "two"] }` +
+                `\nor an array of dict entries (2-element arrays) e.g.: [ ["string-opt", "value"], ["num-opt", 123], ["array-opt", ["one", "two"]] ]` +
+                `\n"${confName}" contains:\n${overrides}`, true, 'error', 80);
+            return null;
+        }
+    }
+    // Return the result of using the in-game args parser to combine the defaults with the command line args provided
+    try {
+        const finalOptions = ns.flags(overriddenSchema);
+        log(ns, `INFO: Running ${scriptName} with the following settings:` + Object.keys(finalOptions).filter(a => a != "_").map(a =>
+            `\n  ${a.length == 1 ? "-" : "--"}${a} = ${finalOptions[a] === null ? "null" : JSON.stringify(finalOptions[a])}`).join("") +
+            `\nrun ${scriptName} --help  to get more information about these options.`)
+        return finalOptions;
+    } catch (err) { // Detect if the user passed invalid arguments, and return help text
+        const error = ns.args.includes("help") || ns.args.includes("--help") ? null : // Detect if the user explictly asked for help and suppress the error
+            (typeof err === 'string' ? err : err.message || JSON.stringify(err));
+        // Try to parse documentation about each argument from the source code's comments
+        const source = ns.read(scriptName).split("\n");
+        let argsRow = 1 + source.findIndex(row => row.includes("argsSchema ="));
+        const optionDescriptions = {}
+        while (argsRow && argsRow < source.length) {
+            const nextArgRow = source[argsRow++].trim();
+            if (nextArgRow.length == 0) continue;
+            if (nextArgRow[0] == "]" || nextArgRow.includes(";")) break; // We've reached the end of the args schema
+            const commentSplit = nextArgRow.split("//").map(e => e.trim());
+            if (commentSplit.length != 2) continue; // This row doesn't appear to be in the format: [option...], // Comment
+            const optionSplit = commentSplit[0].split("'"); // Expect something like: ['name', someDefault]. All we need is the name
+            if (optionSplit.length < 2) continue;
+            optionDescriptions[optionSplit[1]] = commentSplit[1];
+        }
+        log(ns, (error ? `ERROR: There was an error parsing the script arguments provided: ${error}\n` : 'INFO: ') +
+            `${scriptName} possible arguments:` + argsSchema.map(a => `\n  ${a[0].length == 1 ? " -" : "--"}${a[0].padEnd(30)} ` +
+                `Default: ${(a[1] === null ? "null" : JSON.stringify(a[1])).padEnd(10)}` +
+                (a[0] in optionDescriptions ? ` // ${optionDescriptions[a[0]]}` : '')).join("") + '\n' +
+            `\nTip: All argument names, and some values support auto-complete. Hit the <tab> key to autocomplete or see possible options.` +
+            `\nTip: Array arguments are populated by specifying the argument multiple times, e.g.:` +
+            `\n       run ${scriptName} --arrayArg first --arrayArg second --arrayArg third  to run the script with arrayArg=[first, second, third]` +
+            (!overrides ? `\nTip: You can override the default values by creating a config file named "${confName}" containing e.g.: { "arg-name": "preferredValue" }`
+                : overrides && !error ? `\nNote: The default values are being modified by overrides in your local "${confName}":\n${overrides}`
+                    : `\nThis error may have been caused by your local overriding "${confName}" (especially if you changed the types of any options):\n${overrides}`), true);
+        return null; // Caller should handle null and shut down elegantly.
+    }
+}
+/** @param {NS} ns 
+ * Returns the number of instances of the current script running on the specified host. **/
+ export async function instanceCount(ns, onHost = "home", warn = true, tailOtherInstances = true) {
+    checkNsInstance(ns, '"alreadyRunning"');
+    const scriptName = ns.getScriptName();
+    const others = await getNsDataThroughFile(ns, 'ns.ps(ns.args[0]).filter(p => p.filename == ns.args[1]).map(p => p.pid)',
+        '/Temp/ps-other-instances.txt', [onHost, scriptName]);
+    if (others.length >= 2) {
+        if (warn)
+            log(ns, `WARNING: You cannot start multiple versions of this script (${scriptName}). Please shut down the other instance first.` +
+                (tailOtherInstances ? ' (To help with this, a tail window for the other instance will be opened)' : ''), true, 'warning');
+        if (tailOtherInstances) // Tail all but the last pid, since it will belong to the current instance (which will be shut down)
+            others.slice(0, others.length - 1).forEach(pid => ns.tail(pid));
+    }
+    return others.length;
+}
+
+/** Generate a hashCode for a string that is pretty unique most of the time */
+export function hashCode(s) { return s.split("").reduce(function (a, b) { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0); }
+
+/**
+ * An advanced version of runCommand that lets you pass your own "isAlive" test to reduce RAM requirements (e.g. to avoid referencing ns.isRunning)
+ * Importing incurs 0 GB RAM (assuming fnRun, fnWrite are implemented using another ns function you already reference elsewhere like ns.exec)
+ * @param {NS} ns - The nestcript instance passed to your script's main entry point
+ * @param {function} fnRun - A single-argument function used to start the new sript, e.g. `ns.run` or `(f,...args) => ns.exec(f, "home", ...args)`
+ * @param {string} command - The ns command that should be invoked to get the desired data (e.g. "ns.getServer('home')" )
+ * @param {string=} fileName - (default "/Temp/{commandhash}-data.txt") The name of the file to which data will be written to disk by a temporary process
+ * @param {args=} args - args to be passed in as arguments to command being run as a new script.
+ **/
+ export async function runCommand_Custom(ns, fnRun, command, fileName, args = [], verbose = false, maxRetries = 5, retryDelayMs = 50) {
+    checkNsInstance(ns, '"runCommand_Custom"');
+    if (!Array.isArray(args)) throw new Error(`args specified were a ${typeof args}, but an array is required.`);
+    if (verbose) // In verbose mode, wrap the command in something that will dump it's output to the terminal
+        command = `try { let output = ${command}; ns.tprint(JSON.stringify(output)); } ` +
+            `catch(e) { ns.tprint('ERROR: '+(typeof e=='string'?e:e.message||JSON.stringify(e))); throw(e); }`;
+    else disableLogs(ns, ['sleep']);
+    // Auto-import any helpers that the temp script attempts to use
+    const required = getExports(ns).filter(e => command.includes(`${e}(`));
+    let script = (required.length > 0 ? `import { ${required.join(", ")} } from 'helpers.js'\n` : '') +
+        `export async function main(ns) { ${command} }`;
+    fileName = fileName || `/Temp/${hashCode(command)}-command.js`;
+    // It's possible for the file to be deleted while we're trying to execute it, so even wrap writing the file in a retry
+    return await autoRetry(ns, async () => {
+        // To improve performance, don't re-write the temp script if it's already in place with the correct contents.
+        const oldContents = ns.read(fileName);
+        if (oldContents != script) {
+            if (oldContents) // Create some noise if temp scripts are being created with the same name but different contents
+                ns.tprint(`WARNING: Had to overwrite temp script ${fileName}\nOld Contents:\n${oldContents}\nNew Contents:\n${script}` +
+                    `\nThis warning is generated as part of an effort to switch over to using only 'immutable' temp scripts. ` +
+                    `Please paste a screenshot in Discord at https://discord.com/channels/415207508303544321/935667531111342200`);
+            await ns.write(fileName, script, "w");
+            // Wait for the script to appear and be readable (game can be finicky on actually completing the write)
+            await autoRetry(ns, () => ns.read(fileName), c => c == script, () => `Temporary script ${fileName} is not available, ` +
+                `despite having written it. (Did a competing process delete or overwrite it?)`, maxRetries, retryDelayMs, undefined, verbose, verbose);
+        }
+        // Run the script, now that we're sure it is in place
+        return fnRun(fileName, 1 /* Always 1 thread */, ...args);
+    }, pid => pid !== 0,
+        () => `The temp script was not run (likely due to insufficient RAM).` +
+            `\n  Script:  ${fileName}\n  Args:    ${JSON.stringify(args)}\n  Command: ${command}` +
+            `\nThe script that ran this will likely recover and try again later once you have more free ram.`,
+        maxRetries, retryDelayMs, undefined, verbose, verbose);
+}
+
+const _cachedExports = [];
+/** @param {NS} ns - The nestcript instance passed to your script's main entry point
+ * @returns {string[]} The set of all funciton names exported by this file. */
+function getExports(ns) {
+    if (_cachedExports.length > 0) return _cachedExports;
+    const scriptHelpersRows = ns.read(getFilePath('helpers.js')).split("\n");
+    for (const row of scriptHelpersRows) {
+        if (!row.startsWith("export")) continue;
+        const funcNameStart = row.indexOf("function") + "function".length + 1;
+        const funcNameEnd = row.indexOf("(", funcNameStart);
+        _cachedExports.push(row.substring(funcNameStart, funcNameEnd));
+    }
+    return _cachedExports;
 }

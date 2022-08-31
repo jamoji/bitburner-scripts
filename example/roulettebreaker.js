@@ -1,4 +1,4 @@
-import { autoRetry, log } from '/hack/utils.js'
+import { autoRetry, log } from '/smircher/utils.js'
 /** @param {NS} ns */
 let _ns;
 export async function main(ns) {
@@ -100,6 +100,7 @@ export async function main(ns) {
 				player = ns.getPlayer();			
 			}
 			ns.enableLog('toast');
+			fixMath();
 			break; // We achieved everthing we wanted, we can exit the while loop.
 		} catch (err) {
 			ns.tail(); // We're having difficulty, pop open a tail window so the user is aware.

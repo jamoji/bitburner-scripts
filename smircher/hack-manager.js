@@ -27,35 +27,37 @@ export async function main(ns) {
 		ns.tprint(`Cannot run on ${name} due to low RAM`);
 		return;
 	}
+	await killemall(ns,name);
+	// simple round robin.  Works if the number of threads is small.
 	try {
 		//args[0: target, 1: desired start time, 2: expected end, 3: expected duration, 4: description, 5: disable toast warnings, 6: loop]
-		let sargs = [ target,0,0,0,0,false ];
+		let sargs = [ target ];
 		ns.print(`Starting loop on ${name} RAMMax: ${mem[0]} RAM-Used:${mem[1]} GrowThreads ${growThreads} HackThreads ${hackThreads} weakThreads ${weakenThreads} GetMoney ${getMoney}`);
 		while(true) {
 			if (ns.getServerSecurityLevel(target) > securityThresh && weakenThreads > 0 ) {
 				// If the server's security level is above our threshold, weaken it
-				if( ns.scriptRunning('/hack/Remote/weak-target.js',name) ) {
+				if( ns.scriptRunning('/smircher/Remote/weak-target.js',name) ) {
 					await ns.sleep(500);
 				} else {
-					await killemall(ns);
-					ns.run('/hack/Remote/weak-target.js', weakenThreads, ...sargs);
+					await killemall(ns,name,'/smircher/Remote/weak-target.js');
+					ns.run('/smircher/Remote/weak-target.js', weakenThreads, ...sargs);
 				}
 				 
 			} else if ((ns.getServerMoneyAvailable(target) < moneyThresh || ! getMoney) && growThreads > 0 ) {
 				// If the server's money is less than our threshold, grow it
-				if( ns.scriptRunning('/hack/Remote/grow-target.js',name) ) {
+				if( ns.scriptRunning('/smircher/Remote/grow-target.js',name) ) {
 					await ns.sleep(500);
 				} else {
-					await killemall(ns);
-					ns.run('/hack/Remote/grow-target.js', growThreads, ...sargs);
+					await killemall(ns,name,'/smircher/Remote/grow-target.js');
+					ns.run('/smircher/Remote/grow-target.js', growThreads, ...sargs);
 				}
 			} else if( getMoney && hackThreads > 0) {
 				// Otherwise, hack it
-				if( ns.scriptRunning('/hack/Remote/hack-target.js',name) ) {
+				if( ns.scriptRunning('/smircher/Remote/hack-target.js',name) ) {
 					await ns.sleep(500);
 				} else {
-					await killemall(ns);
-					ns.run('/hack/Remote/hack-target.js', hackThreads, ...sargs);
+					await killemall(ns,name,'/smircher/Remote/hack-target.js');
+					ns.run('/smircher/Remote/hack-target.js', hackThreads, ...sargs);
 				}
 			} else {
 				await ns.sleep(1000);
@@ -67,11 +69,16 @@ export async function main(ns) {
 	}
 	
 }
-async function killemall(ns) {
+async function killemall(ns, name, skip=null) {
+	let scripts = ['/smircher/Remote/weak-target.js','/smircher/Remote/grow-target.js','/smircher/Remote/hack-target.js'];
+	ns.disableLog('kill')
 	try {
-		await ns.kill('/hack/Remote/weak-target.js');
-		await ns.kill('/hack/Remote/grow-target.js');
-		await ns.kill('/hack/Remote/hack-target.js');
+		for( let script in scripts ){
+			if( skip == null || scripts[script] != skip ) {
+				await ns.kill( scripts[script], name );
+			}
+		}		
 	} catch {}
-	await ns.sleep(1000);
+	ns.enableLog('kill');
+	await ns.sleep(100);
 }

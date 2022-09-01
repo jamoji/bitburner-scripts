@@ -3,3 +3,4 @@
 .vscode/*.*
 *.ts
 *workspace
+bitburner-scripts.code-workspace

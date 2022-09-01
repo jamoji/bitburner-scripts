@@ -135,7 +135,10 @@ export async function main(ns) {
                     else
                         sargs = ['joesguns', threshold, false, growRam,hackRam,weakenRam];
                 } else {
-                    sargs = [ target, threshold, true, growRam,hackRam,weakenRam];
+                    if( serverDetail.moneyMax > 0 )
+                        sargs = [ serverDetail.hostname, threshold, true, growRam,hackRam,weakenRam];
+                    else
+                        sargs = [ target, threshold, true, growRam,hackRam,weakenRam];
                 }
                 if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) )
                     await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)

@@ -1,5 +1,5 @@
 import {
-    formatMoney, launchScriptHelper, formatNumberShort, exec, log, getConfiguration, disableLogs, instanceCount
+    launchScriptHelper, getConfiguration, instanceCount
 } from '/smircher/utils.js'
 
 const argsSchema = [

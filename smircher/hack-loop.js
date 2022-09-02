@@ -108,16 +108,22 @@ export async function main(ns) {
         let hackRam = ns.getScriptRam('/smircher/Remote/hack-target.js','home');
         let manageRam = ns.getScriptRam('/smircher/hack-manager.js', 'home');
         // find the correct host to hack, given our current hacking skill
-        let target,cash;
+        let target,cash, targets=[];
         for( let i = 0; i < servers.length; i++) {
             let serverDetail = serverInfo(servers[i],false);
-            if( serverDetail.hasAdminRights && ( serverDetail.requiredHackingSkill < player.skills.hacking ) && ( cash == undefined || serverDetail.moneyMax > cash)) {
+            if( serverDetail.hasAdminRights && ( serverDetail.requiredHackingSkill < ( player.skills.hacking / 3 ) ) && ( cash == undefined || serverDetail.moneyMax > cash)) {
                 // ns.tprint(`Choosing ${serverDetail.hostname} for money hacking. ${serverDetail.moneyMax} > ${cash == undefined ? 0:cash} ${player.skills.hacking} > ${serverDetail.requiredHackingSkill}`)
                 target = serverDetail.hostname;
                 cash = serverDetail.moneyMax;
+                if ( ! skipHost.includes(serverDetail.hostname) && ! serverDetail.purchasedByPlayer && serverDetail.moneyMax > 0 )
+                    targets.push(serverDetail.hostname);
             }
         }
-        
+        let inte = targets.sort( function (a, b) {
+            let d = serverInfo(a).moneyMax - serverInfo(b).moneyMax;
+            return d;
+        });
+        targets = inte;
         for ( let i = 0; i < servers.length; i++ ) {
             let server = servers[i];
             let serverDetail = serverInfo(server);
@@ -130,20 +136,34 @@ export async function main(ns) {
                 log(ns,`Running hack-manager on ${serverDetail.hostname}`);
                 let sargs;
                 if((serverDetail.purchasedByPlayer || target == undefined) && ( player.skills.hacking < 500 || prioritize_xp ) ) {
-                    if( player.skills.hacking < 10 )
+                    if( player.skills.hacking < 10 ) {
                         sargs = ['n00dles', threshold, false, growRam,hackRam,weakenRam];
-                    else
+                    } else {
                         sargs = ['joesguns', threshold, false, growRam,hackRam,weakenRam];
+                    }
+                    if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                        await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                    }
                 } else {
-                    if( serverDetail.moneyMax > 0 )
+                    if ( serverDetail.purchasedByPlayer ) {
+                        // we own these, we are going to divide the targets we are running vs the ones we can run.
+                        sargs = [ targets.toString(), threshold, true, growRam,hackRam,weakenRam];
+                        if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                            await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                        }
+                    } else if( serverDetail.moneyMax > 0 ) {
                         sargs = [ serverDetail.hostname, threshold, true, growRam,hackRam,weakenRam];
-                    else
+                        if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                            await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                        }
+                    } else {
                         sargs = [ target, threshold, true, growRam,hackRam,weakenRam];
-                }
-                if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) )
-                    await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
-            }
-            
+                        if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                            await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                        }
+                    }
+                }                
+            }            
         }
         reload = false;
     } while( loop );

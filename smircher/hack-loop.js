@@ -3,7 +3,7 @@ import {
 } from '/smircher/utils.js'
 
 const argsSchema = [
-    ['threshold', 0.8], // Threshold of system resources to use
+    ['threshold', 0.9], // Threshold of system resources to use
     ['loop', true], // Run as Daemon
     ['reload',false], // Should we copy scripts back to the targets if they are missing.
     ['prioritize_xp', false], // Prioritize hack xp over money    
@@ -31,7 +31,7 @@ export async function main(ns) {
     let serverDetails = {};
     let depth = 10;
     let player = ns.getPlayer();
-    let skipHost = ['darkweb'];
+    let skipHost = ['darkweb', 'n00dles'];
 
     let serverInfo = (x, useCache = true) => {
         if ( ! serverDetails[x]  || ! useCache )
@@ -115,7 +115,7 @@ export async function main(ns) {
                 // ns.tprint(`Choosing ${serverDetail.hostname} for money hacking. ${serverDetail.moneyMax} > ${cash == undefined ? 0:cash} ${player.skills.hacking} > ${serverDetail.requiredHackingSkill}`)
                 target = serverDetail.hostname;
                 cash = serverDetail.moneyMax;
-                if ( ! skipHost.includes(serverDetail.hostname) && ! serverDetail.purchasedByPlayer && serverDetail.moneyMax > 0 )
+                if ( ! skipHost.includes(serverDetail.hostname) && ! serverDetail.purchasedByPlayer && serverDetail.moneyMax > 0 && ! skipHost.includes( serverDetail.hostname ) )
                     targets.push(serverDetail.hostname);
             }
         }

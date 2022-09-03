@@ -37,12 +37,14 @@ export async function main(ns) {
 		if( ! Array.isArray( targets ) ) {
 			targets =  [ targets ];
 		}
-		growThreads = Math.floor(growThreads/targets.length);
-		hackThreads = Math.floor(hackThreads/targets.length);
-		weakenThreads = Math.floor(weakenThreads/targets.length);
-		growThreads < 1 ? 1:growThreads;
-		hackThreads < 1 ? 1:hackThreads;
-		weakenThreads < 1 ? 1:weakenThreads;
+		let mem = ns.getServerRam(name);
+		let growThreads = Math.floor((mem[0]-mem[1])*threshold/growMem);
+		let hackThreads = Math.floor((mem[0]-mem[1])*threshold/hackMem);
+		let weakenThreads = Math.floor((mem[0]-mem[1])*threshold/weakenMem);
+		let totalMoney=0;
+		for( let i = 0; i < targets.length; i++) {
+			totalMoney += ns.getServerMaxMoney(targets[i]);
+		}
 		
 		ns.print(`Starting loop on ${name} RAMMax: ${mem[0]} RAM-Used:${mem[1]} GrowThreads ${growThreads} HackThreads ${hackThreads} weakThreads ${weakenThreads} GetMoney ${getMoney}`);
 		while(true) {
@@ -51,20 +53,30 @@ export async function main(ns) {
 				let moneyThresh = ns.getServerMaxMoney(target) * threshold;
 				let securityThresh = ns.getServerMinSecurityLevel(target) + 5;
 				let sargs = [ target ];
-				if (ns.getServerSecurityLevel(target) > securityThresh && weakenThreads > 0 ) {
+				// growThreads = Math.floor(growThreads/targets.length);
+				// hackThreads = Math.floor(hackThreads/targets.length);
+				// weakenThreads = Math.floor(weakenThreads/targets.length);
+				let perc = ( moneyThresh / totalMoney );
+				let gThreads = Math.floor( growThreads * perc );
+				let hThreads = Math.floor( hackThreads * perc );
+				let wThreads = Math.floor( weakenThreads * perc );
+				gThreads < 1 ? 1:gThreads;
+				hThreads < 1 ? 1:hThreads;
+				wThreads < 1 ? 1:wThreads;
+				if (ns.getServerSecurityLevel(target) > securityThresh && wThreads > 0 ) {
 					// If the server's security level is above our threshold, weaken it
 					if( ! ns.isRunning('/smircher/Remote/weak-target.js',name, ...sargs) ) {
-						ns.run('/smircher/Remote/weak-target.js', weakenThreads, ...sargs);
+						ns.run('/smircher/Remote/weak-target.js', wThreads, ...sargs);
 					}					
-				} else if ((ns.getServerMoneyAvailable(target) < moneyThresh || ! getMoney) && growThreads > 0 ) {
+				} else if ((ns.getServerMoneyAvailable(target) < moneyThresh || ! getMoney) && gThreads > 0 ) {
 					// If the server's money is less than our threshold, grow it
 					if( ! ns.isRunning('/smircher/Remote/grow-target.js',name, ...sargs) ) {
-						ns.run('/smircher/Remote/grow-target.js', growThreads, ...sargs);
+						ns.run('/smircher/Remote/grow-target.js', gThreads, ...sargs);
 					}
-				} else if( getMoney && hackThreads > 0) {
+				} else if( getMoney && hThreads > 0) {
 					// Otherwise, hack it
 					if( ! ns.isRunning('/smircher/Remote/hack-target.js',name, ...sargs) ) {
-						ns.run('/smircher/Remote/hack-target.js', hackThreads, ...sargs);
+						ns.run('/smircher/Remote/hack-target.js', hThreads, ...sargs);
 					}
 				}
 			}

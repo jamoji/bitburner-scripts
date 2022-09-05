@@ -72,12 +72,12 @@ export function getFilePath(file) {
  * @param {Boolean} convertFileName
  * Returns pid of running process */
 export function launchScriptHelper(ns, baseScriptName, args = [], convertFileName = true) {
-	ns.tail(); // If we're going to be launching scripts, show our tail window so that we can easily be killed if the user wants to interrupt.
+	// ns.tail(); // If we're going to be launching scripts, show our tail window so that we can easily be killed if the user wants to interrupt.
 	const pid = ns.run(convertFileName ? getFilePath(baseScriptName) : baseScriptName, 1, ...args);
 	if (!pid)
 		log(ns, `ERROR: Failed to launch ${baseScriptName} with args: [${args.join(", ")}]`, true, 'error');
 	else
-		log(ns, `INFO: Launched ${baseScriptName} (pid: ${pid}) with args: [${args.join(", ")}]`, true);
+		log(ns, `INFO: Launched ${baseScriptName} (pid: ${pid}) with args: [${args.join(", ")}]`, false);
 	return pid;
 }
 /** If the argument is an Error instance, returns it as is, otherwise, returns a new Error instance. */

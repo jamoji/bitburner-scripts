@@ -57,6 +57,31 @@ export async function main(ns) {
         }
         return children;
 	}
+    async function killScripts ( server ) {
+        try { await ns.scriptKill('/smircher/hack-manager.js',server); } catch{}
+        try { await ns.scriptKill('/smircher/Remote/weak-target.js',server); } catch{}
+        try { await ns.scriptKill('/smircher/Remote/grow-target.js',server); } catch{}
+        try { await ns.scriptKill('/smircher/Remote/hack-target.js',server); } catch{}
+        return;
+    }
+    function shuffle(array) {
+        let currentIndex = array.length,  randomIndex;
+      
+        // While there remain elements to shuffle.
+        while (currentIndex != 0) {
+      
+          // Pick a remaining element.
+          randomIndex = Math.floor(Math.random() * currentIndex);
+          currentIndex--;
+      
+          // And swap it with the current element.
+          [array[currentIndex], array[randomIndex]] = [
+            array[randomIndex], array[currentIndex]];
+        }
+      
+        return array;
+      }
+    let initialized = 0;
     do {
         /** start from local, query and sort locally connected servers */
         for ( let i = 0; i < depth; i++ ) {
@@ -84,10 +109,7 @@ export async function main(ns) {
             }
             if( reload || !ns.fileExists('/smircher/hack-manager.js', serverDetail.hostname ) ) {
                 if ( serverDetail.hackDifficulty < player.skills.hacking ) {
-                    try { await ns.scriptKill('/smircher/hack-manager.js',serverDetail.hostname); } catch{}
-                    try { await ns.scriptKill('/smircher/Remote/weak-target.js',serverDetail.hostname); } catch{}
-                    try { await ns.scriptKill('/smircher/Remote/grow-target.js',serverDetail.hostname); } catch{}
-                    try { await ns.scriptKill('/smircher/Remote/hack-target.js',serverDetail.hostname); } catch{}
+                    await killScripts( serverDetail.hostname );
                 }
                 if( serverDetail.hostname !== "home") {
                     await ns.rm( '/smircher/hack-manager.js',serverDetail.hostname );
@@ -133,13 +155,18 @@ export async function main(ns) {
             if( serverDetail.maxRam < manageRam + hackRam ) {
                 log(ns,`Skipping ${serverDetail.hostname} due to low RAM ${serverDetail.maxRam}`)
             } else if(ns.getServer(serverDetail.hostname).hasAdminRights) {
+                if ( initialized == 1 ) {
+                    await killScripts( serverDetail.hostname );
+                }
                 log(ns,`Running hack-manager on ${serverDetail.hostname}`);
                 let sargs;
-                if((serverDetail.purchasedByPlayer || target == undefined) && ( player.skills.hacking < 500 || prioritize_xp ) ) {
+                shuffle(targets);
+                if((serverDetail.purchasedByPlayer || target == undefined) && ( player.skills.hacking < 500 || prioritize_xp ) && initialized < 1 ) {
                     if( player.skills.hacking < 10 ) {
                         sargs = ['n00dles', threshold, false, growRam,hackRam,weakenRam];
                     } else {
                         sargs = ['joesguns', threshold, false, growRam,hackRam,weakenRam];
+                        initialized = 1;
                     }
                     if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
                         await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
@@ -162,8 +189,12 @@ export async function main(ns) {
                             await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
                         }
                     }
-                }                
+                }   
+                await ns.sleep(100);             
             }            
+        }
+        if ( initialized == 1 ) {
+            initialized = 2;
         }
         reload = false;
     } while( loop );

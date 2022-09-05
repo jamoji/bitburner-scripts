@@ -33,10 +33,24 @@ export async function main(ns) {
 	let tries = options.tries;
 	let ammount = options['bet-ammount'];
 	let tail = options.tail;
+	/**
+	 * canRunCasino()
+	 * Check to see if i can run it.
+	 * @returns boolean
+	 */
+	function canRunCasino() {
+		if( ns.fileExists( ran_flag, 'home' ) ) {
+			return false;
+		}
+		return true;
+	}
 	if( tail ) {
 		ns.tail();
 		await ns.sleep(1000);
 		ns.tprint("Starting Tail")
+	}
+	if( ! canRunCasino() ) {
+		return;
 	}
 	ns.print(`Loop: ${loop.toString()} Tries: ${tries.toString()} Bet ammount: ${ammount.toString()}`);
 	let broken = false;

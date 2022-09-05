@@ -17,6 +17,9 @@ export async function main(ns) {
 	// have. If the target's security level is higher than this,
 	// we'll weaken it before doing anything else
 	
+	function getRandomInt(max) {
+		return Math.floor(Math.random() * max);
+	}
 	
 	let mem = ns.getServerRam(name);
 	let growThreads = Math.floor((mem[0]-mem[1])*threshold/growMem);
@@ -79,6 +82,7 @@ export async function main(ns) {
 						ns.run('/smircher/Remote/hack-target.js', hThreads, ...sargs);
 					}
 				}
+				await ns.sleep(getRandomInt(100));
 			}
 			await ns.sleep(1000);
 		}

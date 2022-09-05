@@ -1,17 +1,39 @@
+import {
+    log, getConfiguration, disableLogs, instanceCount, exec, find, click, setText,scanAllServers, launchScriptHelper
+} from '/smircher/utils.js'
+
+const argsSchema = [
+    ['max-hacknodes', 25], // Maximum Number of Hacknodes to purchase
+    ['max-level-nodes',200], // Prioritize home compute purchase over augments
+    ['reserve-percent', 0.6], // reserve percentage to save for priority purchase
+    ['tail',false] // open tail window on run
+];
+
+export function autocomplete(data, _) {
+    data.flags(argsSchema);
+    return [];
+}
+let _ns, scripts=[];
+let doc = document;
+const ran_flag = "/Temp/ran-casino.txt"
+
 /** @param {NS} ns */
 export async function main(ns) {
+    const runOptions = getConfiguration(ns, argsSchema);
+    if (!runOptions || await instanceCount(ns) > 1) return; // Prevent multiple instances of this script from being started, even with different args.
+    let options = runOptions; // We don't set the global "options" until we're sure this is the only running instance
+    disableLogs(ns, ['sleep', 'run', 'getServerMaxRam', 'getServerUsedRam','getServerMoneyAvailable']);
+    _ns=ns;
 	let args = ns.args;
-	/** args[0] == reserve default 20k, args[1] == maxNumberOfNodes default 25, args[2] == maxLevelNodes default 200 */
-	let reserve = args[0] !== undefined ? args[0]:200000;
-	let maxNumberOfNodes = args[1] !== undefined ? args[1]:25;
-	let maxLevel = 200;
+	let reserve = options['reserve-percent'];
+	let maxNumberOfNodes = options['max-hacknodes'];
+	let maxLevel = options['max-level-nodes'];
 	let wait = 10000;
 	
 	function myMoney() {
-    	return ns.getServerMoneyAvailable("home")-reserve;
+		let pmoney = ns.getServerMoneyAvailable("home");
+    	return pmoney - ( pmoney * reserve );
 	}
-	ns.disableLog("getServerMoneyAvailable");
-	ns.disableLog("sleep");
 	function buyNodes() {
 		if(myMoney() > ns.hacknet.getPurchaseNodeCost() && ns.hacknet.numNodes() < maxNumberOfNodes ) {
 			let res = ns.hacknet.purchaseNode();
@@ -72,7 +94,6 @@ export async function main(ns) {
 	while(true) {
 		// ns.print(`Current Nodes: Count ${ns.hacknet.numNodes()}`)
 		buyNodes();
-				
 		upgradeNodesLevel();
 		upgradeNodesRAM();
 		upgradeNodesCores();

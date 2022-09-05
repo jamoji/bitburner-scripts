@@ -3,7 +3,7 @@ import {
 } from '/smircher/utils.js'
 
 const argsSchema = [
-    ['threshold', 0.8], // Threshold of system resources to use
+    ['threshold', 0.9], // Threshold of system resources to use
     ['loop', true], // Run as Daemon
     ['reload',false], // Should we copy scripts back to the targets if they are missing.
     ['prioritize_xp', false], // Prioritize hack xp over money    
@@ -31,7 +31,7 @@ export async function main(ns) {
     let serverDetails = {};
     let depth = 10;
     let player = ns.getPlayer();
-    let skipHost = ['darkweb'];
+    let skipHost = ['darkweb', 'n00dles'];
 
     let serverInfo = (x, useCache = true) => {
         if ( ! serverDetails[x]  || ! useCache )
@@ -57,6 +57,31 @@ export async function main(ns) {
         }
         return children;
 	}
+    async function killScripts ( server ) {
+        try { await ns.scriptKill('/smircher/hack-manager.js',server); } catch{}
+        try { await ns.scriptKill('/smircher/Remote/weak-target.js',server); } catch{}
+        try { await ns.scriptKill('/smircher/Remote/grow-target.js',server); } catch{}
+        try { await ns.scriptKill('/smircher/Remote/hack-target.js',server); } catch{}
+        return;
+    }
+    function shuffle(array) {
+        let currentIndex = array.length,  randomIndex;
+      
+        // While there remain elements to shuffle.
+        while (currentIndex != 0) {
+      
+          // Pick a remaining element.
+          randomIndex = Math.floor(Math.random() * currentIndex);
+          currentIndex--;
+      
+          // And swap it with the current element.
+          [array[currentIndex], array[randomIndex]] = [
+            array[randomIndex], array[currentIndex]];
+        }
+      
+        return array;
+      }
+    let initialized = 0;
     do {
         /** start from local, query and sort locally connected servers */
         for ( let i = 0; i < depth; i++ ) {
@@ -84,10 +109,7 @@ export async function main(ns) {
             }
             if( reload || !ns.fileExists('/smircher/hack-manager.js', serverDetail.hostname ) ) {
                 if ( serverDetail.hackDifficulty < player.skills.hacking ) {
-                    try { await ns.scriptKill('/smircher/hack-manager.js',serverDetail.hostname); } catch{}
-                    try { await ns.scriptKill('/smircher/Remote/weak-target.js',serverDetail.hostname); } catch{}
-                    try { await ns.scriptKill('/smircher/Remote/grow-target.js',serverDetail.hostname); } catch{}
-                    try { await ns.scriptKill('/smircher/Remote/hack-target.js',serverDetail.hostname); } catch{}
+                    await killScripts( serverDetail.hostname );
                 }
                 if( serverDetail.hostname !== "home") {
                     await ns.rm( '/smircher/hack-manager.js',serverDetail.hostname );
@@ -108,16 +130,22 @@ export async function main(ns) {
         let hackRam = ns.getScriptRam('/smircher/Remote/hack-target.js','home');
         let manageRam = ns.getScriptRam('/smircher/hack-manager.js', 'home');
         // find the correct host to hack, given our current hacking skill
-        let target,cash;
+        let target,cash, targets=[];
         for( let i = 0; i < servers.length; i++) {
             let serverDetail = serverInfo(servers[i],false);
-            if( serverDetail.hasAdminRights && ( serverDetail.requiredHackingSkill < player.skills.hacking ) && ( cash == undefined || serverDetail.moneyMax > cash)) {
+            if( serverDetail.hasAdminRights && ( serverDetail.requiredHackingSkill < ( player.skills.hacking / 3 ) ) && ( cash == undefined || serverDetail.moneyMax > cash)) {
                 // ns.tprint(`Choosing ${serverDetail.hostname} for money hacking. ${serverDetail.moneyMax} > ${cash == undefined ? 0:cash} ${player.skills.hacking} > ${serverDetail.requiredHackingSkill}`)
                 target = serverDetail.hostname;
                 cash = serverDetail.moneyMax;
+                if ( ! skipHost.includes(serverDetail.hostname) && ! serverDetail.purchasedByPlayer && serverDetail.moneyMax > 0 && ! skipHost.includes( serverDetail.hostname ) )
+                    targets.push(serverDetail.hostname);
             }
         }
-        
+        let inte = targets.sort( function (a, b) {
+            let d = serverInfo(a).moneyMax - serverInfo(b).moneyMax;
+            return d;
+        });
+        targets = inte;
         for ( let i = 0; i < servers.length; i++ ) {
             let server = servers[i];
             let serverDetail = serverInfo(server);
@@ -127,20 +155,46 @@ export async function main(ns) {
             if( serverDetail.maxRam < manageRam + hackRam ) {
                 log(ns,`Skipping ${serverDetail.hostname} due to low RAM ${serverDetail.maxRam}`)
             } else if(ns.getServer(serverDetail.hostname).hasAdminRights) {
+                if ( initialized == 1 ) {
+                    await killScripts( serverDetail.hostname );
+                }
                 log(ns,`Running hack-manager on ${serverDetail.hostname}`);
                 let sargs;
-                if((serverDetail.purchasedByPlayer || target == undefined) && ( player.skills.hacking < 500 || prioritize_xp ) ) {
-                    if( player.skills.hacking < 10 )
+                shuffle(targets);
+                if((serverDetail.purchasedByPlayer || target == undefined) && ( player.skills.hacking < 500 || prioritize_xp ) && initialized < 1 ) {
+                    if( player.skills.hacking < 10 ) {
                         sargs = ['n00dles', threshold, false, growRam,hackRam,weakenRam];
-                    else
+                    } else {
                         sargs = ['joesguns', threshold, false, growRam,hackRam,weakenRam];
+                        initialized = 1;
+                    }
+                    if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                        await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                    }
                 } else {
-                    sargs = [ target, threshold, true, growRam,hackRam,weakenRam];
-                }
-                if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) )
-                    await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
-            }
-            
+                    if ( serverDetail.purchasedByPlayer ) {
+                        // we own these, we are going to divide the targets we are running vs the ones we can run.
+                        sargs = [ targets.toString(), threshold, true, growRam,hackRam,weakenRam];
+                        if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                            await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                        }
+                    } else if( serverDetail.moneyMax > 0 ) {
+                        sargs = [ serverDetail.hostname, threshold, true, growRam,hackRam,weakenRam];
+                        if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                            await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                        }
+                    } else {
+                        sargs = [ target, threshold, true, growRam,hackRam,weakenRam];
+                        if( reload || !ns.scriptRunning('/smircher/hack-manager.js', serverDetail.hostname) ) {
+                            await exec(ns,'/smircher/hack-manager.js', serverDetail.hostname, 1, ...sargs)
+                        }
+                    }
+                }   
+                await ns.sleep(100);             
+            }            
+        }
+        if ( initialized == 1 ) {
+            initialized = 2;
         }
         reload = false;
     } while( loop );

@@ -72,12 +72,12 @@ export function getFilePath(file) {
  * @param {Boolean} convertFileName
  * Returns pid of running process */
 export function launchScriptHelper(ns, baseScriptName, args = [], convertFileName = true) {
-	ns.tail(); // If we're going to be launching scripts, show our tail window so that we can easily be killed if the user wants to interrupt.
+	// ns.tail(); // If we're going to be launching scripts, show our tail window so that we can easily be killed if the user wants to interrupt.
 	const pid = ns.run(convertFileName ? getFilePath(baseScriptName) : baseScriptName, 1, ...args);
 	if (!pid)
 		log(ns, `ERROR: Failed to launch ${baseScriptName} with args: [${args.join(", ")}]`, true, 'error');
 	else
-		log(ns, `INFO: Launched ${baseScriptName} (pid: ${pid}) with args: [${args.join(", ")}]`, true);
+		log(ns, `INFO: Launched ${baseScriptName} (pid: ${pid}) with args: [${args.join(", ")}]`, false);
 	return pid;
 }
 /** If the argument is an Error instance, returns it as is, otherwise, returns a new Error instance. */
@@ -391,4 +391,29 @@ function getExports(ns) {
         _cachedExports.push(row.substring(funcNameStart, funcNameEnd));
     }
     return _cachedExports;
+}
+
+// Some DOM helpers (partial credit to @ShamesBond)
+const doc = document;
+export async function click(ns,elem) {
+	await elem[Object.keys(elem)[1]].onClick({ isTrusted: true });
+	await ns.sleep(1000);
+}
+export async function setText(ns,input, text) {
+	await input[Object.keys(input)[1]].onChange({ isTrusted: true, target: { value: text } });
+	await ns.sleep(1000);
+}
+export function find(xpath) {
+	let item =  doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+	return item.singleNodeValue; 
+}
+export async function findRetry(ns, xpath, expectFailure = false, retries = null) {
+	try {
+		return await autoRetry(ns, () => find(xpath), e => e !== undefined,
+			() => expectFailure ? `It's looking like the element with xpath: ${xpath} isn't present...` :
+				`Could not find the element with xpath: ${xpath}\nSomething may have re-routed the UI`,
+			retries != null ? retries : expectFailure ? 3 : 10, 1, 2);
+	} catch (e) {
+		if (!expectFailure) throw e;
+	}
 }
